@@ -31,6 +31,22 @@ This workflow orchestrates the full SDD (Software Design Document) pipeline:
 | `with_checklist` | boolean | `false` | Include the checklist phase |
 | `skip_clarify` | boolean | `false` | Skip the clarify gate |
 
+## Installation
+
+This workflow is listed in the Spec Kit community catalog. Add it to a project with:
+
+```bash
+specify workflow add pipeline
+```
+
+To install a pinned version directly from this repository without the catalog:
+
+```bash
+specify workflow add https://raw.githubusercontent.com/domattioli/spec-kit-workflow-pipeline/v1.0.0/workflow.yml
+```
+
+Once added, run it as shown below.
+
 ## Usage
 
 ### Run with defaults
@@ -117,7 +133,8 @@ To improve this workflow:
 1. Test changes locally with `specify workflow run`
 2. Update version in `workflow.yml`
 3. Add entry to `CHANGELOG.md`
-4. Submit PR to the Spec Kit repository
+4. Open a PR against [this repository](https://github.com/domattioli/spec-kit-workflow-pipeline)
+5. Tag a release; the community catalog entry in [github/spec-kit](https://github.com/github/spec-kit/blob/main/workflows/catalog.community.json) points at the tagged raw URL
 
 ## License
 
