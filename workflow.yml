@@ -2,7 +2,7 @@ schema_version: "1.0"
 workflow:
   id: "pipeline"
   name: "Guided SDD Pipeline"
-  version: "1.0.0"
+  version: "1.1.0"
   author: "domattioli"
   description: >
     Chains specify → clarify → plan → tasks → analyze → implement → converge
@@ -10,7 +10,9 @@ workflow:
     convergence loop.
 
 requires:
-  speckit_version: ">=0.8.5"
+  # speckit.converge was introduced in Spec Kit v0.11.2; earlier versions fail
+  # at the convergence step.
+  speckit_version: ">=0.11.2"
   integrations:
     any: ["claude", "copilot", "gemini", "opencode"]
 
@@ -98,28 +100,28 @@ steps:
     integration: "{{ inputs.integration }}"
     input: { args: "{{ inputs.spec }}" }
 
-  # converge must run after implement (per its contract): it assesses the code
-  # against spec/plan/tasks and appends any remaining work as new tasks. The loop
-  # is bounded rather than condition-driven because prompt-template commands do
-  # not reliably signal findings via exit codes; a `converged` pass leaves
-  # tasks.md untouched, so extra iterations are safe no-ops.
-  - id: converge-first
-    command: speckit.converge
-    integration: "{{ inputs.integration }}"
-    continue_on_error: true
-    input: { args: "{{ inputs.spec }}" }
-
+  # Post-implement convergence loop. Each cycle runs converge (assesses the code
+  # against spec/plan/tasks and appends any remaining work as new tasks) followed
+  # by implement (addresses whatever converge appended).
+  #
+  # The loop is an unconditional, bounded do-while rather than condition-driven:
+  # the engine cannot branch on converge's semantic outcome because command steps
+  # stream their output (stdout is not captured back into step output) and
+  # converge exits 0 for both the `converged` and `tasks_appended` outcomes, so
+  # neither exit_code nor stdout can distinguish them. A `converged` pass leaves
+  # tasks.md unchanged, so any trailing iterations after convergence are safe
+  # no-ops. Bounded at 3 cycles.
   - id: converge-loop
-    type: while
-    condition: "{{ steps.converge-first.output.exit_code != 0 }}"
+    type: do-while
+    condition: "true"
     max_iterations: 3
     steps:
-      - id: implement-remaining
-        command: speckit.implement
-        integration: "{{ inputs.integration }}"
-        input: { args: "Complete the appended convergence tasks for {{ inputs.spec }}" }
-      - id: converge-again
+      - id: converge
         command: speckit.converge
         integration: "{{ inputs.integration }}"
         continue_on_error: true
         input: { args: "{{ inputs.spec }}" }
+      - id: implement-remaining
+        command: speckit.implement
+        integration: "{{ inputs.integration }}"
+        input: { args: "Complete any tasks appended by convergence for {{ inputs.spec }}" }

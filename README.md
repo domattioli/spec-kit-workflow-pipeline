@@ -4,12 +4,12 @@ A comprehensive workflow that chains the core Spec Kit commands into a single, g
 
 ## Overview
 
-This workflow orchestrates the full SDD (Software Design Document) pipeline:
+This workflow orchestrates the full SDD (Spec-Driven Development) pipeline:
 
 ```
-[Constitution] → Specify → [Clarify Gate] → Plan → [Checklist] → Tasks 
+[Constitution] → Specify → [Clarify Gate] → Plan → [Checklist] → Tasks
     ↓
-    Analyze → Implement → Converge → [Convergence Loop]
+    Analyze → Implement → [Convergence Loop: Converge → Implement, ×3]
 ```
 
 ## Features
@@ -42,38 +42,40 @@ specify workflow add pipeline
 To install a pinned version directly from this repository without the catalog:
 
 ```bash
-specify workflow add https://raw.githubusercontent.com/domattioli/spec-kit-workflow-pipeline/v1.0.0/workflow.yml
+specify workflow add https://raw.githubusercontent.com/domattioli/spec-kit-workflow-pipeline/v1.1.0/workflow.yml
 ```
 
-Once added, run it as shown below.
+Once added, run it as shown below. Inputs are passed as `--input key=value` (or
+`-i key=value`) pairs — `specify workflow run` takes the workflow source followed
+by repeated `--input` values, never positional arguments or per-input flags.
 
 ## Usage
 
 ### Run with defaults
 ```bash
-specify workflow run pipeline "build a todo app"
+specify workflow run pipeline --input 'spec=build a todo app'
 ```
 
 ### Run with all optional phases
 ```bash
 specify workflow run pipeline \
-  "build a todo app" \
-  --with-constitution \
-  --with-checklist
+  --input 'spec=build a todo app' \
+  --input with_constitution=true \
+  --input with_checklist=true
 ```
 
 ### Run with a specific integration
 ```bash
 specify workflow run pipeline \
-  "build a todo app" \
-  --integration claude
+  --input 'spec=build a todo app' \
+  --input integration=claude
 ```
 
 ### Skip clarify gate
 ```bash
 specify workflow run pipeline \
-  "build a todo app" \
-  --skip-clarify
+  --input 'spec=build a todo app' \
+  --input skip_clarify=true
 ```
 
 ## Step Details
@@ -87,7 +89,7 @@ Generates the specification from your feature description.
 ### 3. Clarify (Optional Gate)
 Provides clarifications on the spec, then pauses for human review/approval before proceeding to planning.
 
-Can be skipped entirely with `--skip-clarify`.
+Can be skipped entirely with `--input skip_clarify=true`.
 
 ### 4. Plan
 Generates the implementation plan based on the spec.
@@ -113,13 +115,13 @@ Generates the implementation code based on the spec, plan, and tasks.
 
 ## Prerequisites
 
-- Spec Kit >= 0.8.5
+- Spec Kit >= 0.11.2 (the release that introduced `speckit.converge`)
 - Initialized project with one of: Claude, Copilot, Gemini, OpenCode
 
 ## Notes
 
 ### Convergence Loop Behavior
-The convergence loop is bounded to 3 iterations rather than condition-driven, since prompt-template commands don't reliably signal findings via exit codes. A converged pass leaves tasks.md byte-for-byte unchanged, so extra iterations are safe no-ops.
+The convergence loop is an unconditional, bounded loop (3 cycles) rather than condition-driven. The workflow engine cannot branch on converge's semantic outcome: command steps stream their output to the terminal (stdout is not captured back into step output), and `speckit.converge` exits 0 for both the `converged` and `tasks_appended` outcomes, so neither `exit_code` nor `stdout` can distinguish them. A `converged` pass leaves tasks.md byte-for-byte unchanged, so any iterations after convergence are safe no-ops.
 
 ## Related Workflows
 
